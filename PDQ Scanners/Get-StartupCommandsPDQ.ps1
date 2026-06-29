@@ -1,0 +1,1 @@
+Get-WmiObject -Class Win32_StartupCommand | Select-Object Name, Command, Location

@@ -1,0 +1,1 @@
+Get-NetAdapter | Where-Object { $_.MediaConnectionState -eq "Connected" } | Get-NetIPAddress | Select-Object InterfaceAlias, IPAddress, IPV4Address, ValidLifetime

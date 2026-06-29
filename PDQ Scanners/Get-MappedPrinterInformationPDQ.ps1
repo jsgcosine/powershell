@@ -1,0 +1,1 @@
+Get-Printer | Where-Object { $_.Type -eq "Connection" } | Select-Object Name, ComputerName, PortName | Format-Table
