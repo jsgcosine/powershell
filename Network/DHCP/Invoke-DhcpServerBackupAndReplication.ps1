@@ -20,20 +20,19 @@ Version: 1.2
 
 #>
 
-#Logging and file transfer directories
+# Set logging and file transfer directories
 $dirPath = "C:\ScriptLogging\Invoke-DhcpServerBackupAndReplication"
 $localBackupPath = "C:\DHCPBackup"
 $remoteBackupPath = "\\server.domain.local\DHCPBackup\$ENV:COMPUTERNAME"
 $localLogFilePath = "C:\DHCPLogs"
 
-#Check if directories exist
+# Check if logging and file transfer directories exist
 $dirPathCheck = Test-Path -Path $dirPath
 $localBackupPathCheck = Test-Path -Path $localBackupPath
 $remoteBackupPathCheck = Test-Path -Path $remoteBackupPath
 $localLogFilePathCheck = Test-Path -Path $localLogFilePath
-$logDate = Get-Date -Format ddMMyyyy
 
-#Create directories if it doesn't exist
+# Create directories if they don't exist
 if (!($dirPathCheck)) {
     New-Item -ItemType Directory $DirPath -Force
 }
@@ -50,7 +49,8 @@ if (!($localLogFilePathCheck)) {
     New-Item -ItemType Directory $localLogFilePath -Force
 }
 
-#Start logging console output
+# Start logging console output
+$logDate = Get-Date -Format ddMMyyyy
 Start-Transcript -Path "$dirPath\Invoke-DhcpServerBackupAndReplication-$logDate.txt"
 
 Write-Output "Setting DHCP backup registry options, these settings won't take effect until the DHCP service is restarted"
@@ -61,7 +61,7 @@ Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\DHCPServer\Parame
 Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\DHCPServer\Parameters -Name "DhcpV6LogFilePath" -Value $localLogFilePath
 
 Write-Output "Reconciling all DHCP scopes"
-Get-DhcpServerv4Scope | Repair-DhcpServerv4IPRecord -Force
+Get-DhcpServerv4Scope -ComputerName $ENV:COMPUTERNAME | Repair-DhcpServerv4IPRecord -Force
 
 Write-Output "Backing up DHCP database"
 Backup-DhcpServer -Path $localBackupPath -ComputerName $ENV:COMPUTERNAME -Confirm:$false
@@ -71,14 +71,14 @@ Write-Output "Exporting DHCP configuration and leases to XML"
 Export-DhcpServer -ComputerName $ENV:COMPUTERNAME -File $remoteBackupPath\$($ENV:COMPUTERNAME)_config_leases.xml -Leases -Force
 
 Write-Output "Exporting DHCP Reservations to CSV"
-Get-DhcpServerv4Scope | ForEach-Object { Get-DhcpServerv4Lease -ScopeId $_.ScopeID | Where-Object { $_.AddressState -like '*Reservation' } } | Select-Object ScopeId, IPAddress, HostName, ClientID, AddressState | Export-Csv -Path $remoteBackupPath\$($ENV:COMPUTERNAME)_Reservations.csv -NoTypeInformation -Force
+Get-DhcpServerv4Scope -ComputerName $ENV:COMPUTERNAME | ForEach-Object { Get-DhcpServerv4Lease -ScopeId $_.ScopeID | Where-Object { $_.AddressState -like '*Reservation' } } | Select-Object ScopeId, IPAddress, HostName, ClientID, AddressState | Export-Csv -Path $remoteBackupPath\$($ENV:COMPUTERNAME)_Reservations.csv -NoTypeInformation -Force
 
 Write-Output "Checking non-legacy DHCP scopes for activation"
-$activeScopes = Get-DhcpServerv4Scope | Where-Object { $_.ScopeId -like "10.*" } | Select-Object ScopeId, Name, State
+$activeScopes = Get-DhcpServerv4Scope -ComputerName $ENV:COMPUTERNAME | Where-Object { $_.ScopeId -like "10.*" } | Select-Object ScopeId, Name, State
 foreach ($scope in $activeScopes) {
     if ($scope.State -eq "Inactive") {
         Write-Output "Activating $($scope.Name) - $($scope.ScopeId)"
-        Set-DhcpServerv4Scope -ScopeId $scope.ScopeId -State Active -Confirm:$false
+        Set-DhcpServerv4Scope -ComputerName $ENV:COMPUTERNAME -ScopeId $scope.ScopeId -State Active -Confirm:$false
     }
 }
 
