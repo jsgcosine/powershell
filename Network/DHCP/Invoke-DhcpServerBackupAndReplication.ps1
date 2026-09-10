@@ -3,7 +3,8 @@
 Invoke-DhcpBackupAndReplication.ps1
 
 .PURPOSE
-- Sets DHCP server registry values for remote backup location, daily backup timing, and daily cleanup.
+- Sets DHCP server registry values for local backup location, daily backup timing, daily cleanup, and logging location.
+- Checks for and creates the proper folders.
 - Reconciles all DHCP scopes.
 - Backs up to remote backup location.
 - Exports DHCP server configuration and its leases to XML to remote backup location.
@@ -14,21 +15,22 @@ Set as a scheduled task on Windows DHCP servers with alternating timeframes betw
 
 .NOTES
 Author: Justin Grathwohl
-Date: 09/08/2026
-Version: 1.1
+Date: 09/10/2026
+Version: 1.2
 
 #>
 
 #Logging and file transfer directories
 $dirPath = "C:\ScriptLogging\Invoke-DhcpServerBackupAndReplication"
 $localBackupPath = "C:\DHCPBackup"
-$remoteBackupPath = "\\dr-it01.hoffmaster.local\DHCPBackup\$ENV:COMPUTERNAME"
+$remoteBackupPath = "\\server.domain.local\DHCPBackup\$ENV:COMPUTERNAME"
 $localLogFilePath = "C:\DHCPLogs"
 
 #Check if directories exist
 $dirPathCheck = Test-Path -Path $dirPath
 $localBackupPathCheck = Test-Path -Path $localBackupPath
 $remoteBackupPathCheck = Test-Path -Path $remoteBackupPath
+$localLogFilePathCheck = Test-Path -Path $localLogFilePath
 $logDate = Get-Date -Format ddMMyyyy
 
 #Create directories if it doesn't exist
@@ -42,6 +44,10 @@ if (!($localBackupPathCheck)) {
 
 if (!($remoteBackupPathCheck)) {
     New-Item -ItemType Directory $remoteBackupPath -Force
+}
+
+if (!($localLogFilePathCheck)) {
+    New-Item -ItemType Directory $localLogFilePath -Force
 }
 
 #Start logging console output
